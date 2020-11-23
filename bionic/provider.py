@@ -22,6 +22,7 @@ from .datatypes import (
     CaseKeySpace,
     CodeFingerprint,
     CodeVersion,
+    CodeVersioningPolicy,
     FunctionAttributes,
 )
 from .code_hasher import CodeHasher
@@ -40,13 +41,13 @@ class ProviderAttributes:
     def __init__(
         self,
         out_dnode,
-        code_version=None,
+        code_versioning_policy=None,
         orig_flow_name=None,
         changes_per_run=None,
         aip_task_config=None,
     ):
         self.out_dnode = out_dnode
-        self.code_version = code_version
+        self.code_versioning_policy = code_versioning_policy
         self.orig_flow_name = orig_flow_name
         self.changes_per_run = changes_per_run
         self.aip_task_config = aip_task_config
@@ -73,18 +74,28 @@ class BaseProvider:
     def get_func_attrs(self, case_key):
         return FunctionAttributes(
             code_fingerprint=self.get_code_fingerprint(case_key),
+            code_versioning_policy=self.get_code_versioning_policy(case_key),
             changes_per_run=self.attrs.changes_per_run,
             aip_task_config=self.attrs.aip_task_config,
         )
 
-    def get_code_fingerprint(self, case_key):
-        source_func = self.get_source_func()
-        bytecode_hash = None if source_func is None else CodeHasher.hash(source_func)
+    def get_code_versioning_policy(self, case_key):
+        return (
+            CodeVersioningPolicy(CodeVersion(None, None, None), None)
+            if self.attrs.code_versioning_policy is None
+            else self.attrs.code_versioning_policy
+        )
 
-        code_version = (
-            CodeVersion(None, None)
-            if self.attrs.code_version is None
-            else self.attrs.code_version
+    def get_code_fingerprint(self, case_key):
+        code_versioning_policy = self.get_code_versioning_policy(case_key)
+        code_version = code_versioning_policy.version
+        source_func = self.get_source_func()
+        bytecode_hash = (
+            None
+            if source_func is None or not code_version.includes_bytecode
+            else CodeHasher.hash(
+                source_func, code_versioning_policy.suppress_bytecode_warnings
+            )
         )
 
         return CodeFingerprint(
@@ -200,17 +211,24 @@ class ValueProvider(BaseProvider):
     def has_any_cases(self):
         return self._has_any_values
 
-    def get_code_fingerprint(self, case_key):
+    def get_code_versioning_policy(self, case_key):
         if not self.has_any_cases():
             value_tokens = ""
         else:
             value_tokens = " ".join(self._token_tuples_by_case_key[case_key])
 
-        return CodeFingerprint(
+        return CodeVersioningPolicy(
             version=CodeVersion(
                 major=value_tokens,
                 minor=None,
+                includes_bytecode=None,
             ),
+            suppress_bytecode_warnings=None,
+        )
+
+    def get_code_fingerprint(self, case_key):
+        return CodeFingerprint(
+            version=self.get_code_versioning_policy(case_key).version,
             bytecode_hash=None,
             orig_flow_name=None,
         )
