@@ -24,7 +24,11 @@ import hashlib
 import inspect
 import warnings
 
-from .code_references import get_code_context, get_referenced_objects
+from .code_references import (
+    UNAVAILABLE_CODE_CONTEXT,
+    get_code_context,
+    get_referenced_objects,
+)
 from .utils.misc import oneline
 from .utils.reload import is_internal_file
 
@@ -69,7 +73,7 @@ class CodeHasher:
         self._hash.update(PREFIX_SEPARATOR)
         self._hash.update(obj_bytes)
 
-    def _check_and_ingest(self, obj, code_context=None):
+    def _check_and_ingest(self, obj, code_context=UNAVAILABLE_CODE_CONTEXT):
         """
         Checks for circular references before calling the _ingest
         method, which does the actual encoding.
@@ -229,8 +233,9 @@ class CodeHasher:
         ]
         self._check_and_ingest(consts, code_context)
 
-        references = get_referenced_objects(code, code_context)
-        self._check_and_ingest(references)
+        if code_context.can_find_references:
+            references = get_referenced_objects(code, code_context)
+            self._check_and_ingest(references)
 
 
 class TypePrefix(Enum):

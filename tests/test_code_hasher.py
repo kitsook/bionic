@@ -192,6 +192,8 @@ def test_code_hasher():
         },
         circular_dict_1_a,
         circular_dict_2_a,
+        f1.__code__,
+        f2.__code__,
         f1,
         f2,
         f3,
@@ -264,7 +266,7 @@ def test_same_func_different_names():
         v = 10
         return v
 
-    assert check_hash_equivalence([[f1, f2]])
+    check_hash_equivalence([[f1, f2]])
 
 
 def test_global_variable_references():

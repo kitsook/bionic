@@ -44,11 +44,18 @@ class CodeContext:
         variable names by themselves.
     varnames: dict
         A dictionary that is used to track local variables by name.
+    can_find_references: bool, default True
+        Determines whether we can find references for the code object
+        using this reference.
     """
 
-    globals = attr.ib()
-    cells = attr.ib()
-    varnames = attr.ib()
+    globals = attr.ib(default={})
+    cells = attr.ib(default={})
+    varnames = attr.ib(default={})
+    can_find_references = attr.ib(default=True)
+
+
+UNAVAILABLE_CODE_CONTEXT = CodeContext(can_find_references=False)
 
 
 def get_code_context(func) -> CodeContext:
