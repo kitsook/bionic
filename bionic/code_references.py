@@ -54,6 +54,13 @@ class CodeContext:
     varnames = attr.ib(default={})
     can_find_references = attr.ib(default=True)
 
+    def copy(self):
+        return CodeContext(
+            globals=self.globals.copy(),
+            cells=self.cells.copy(),
+            varnames=self.varnames.copy(),
+        )
+
 
 UNAVAILABLE_CODE_CONTEXT = CodeContext(can_find_references=False)
 
@@ -125,11 +132,7 @@ def get_referenced_objects(code, context):
     # context to not change the original context. The original context
     # can be shared between different code objects, like between an
     # outer and an inner function.
-    context = CodeContext(
-        globals=context.globals.copy(),
-        cells=context.cells.copy(),
-        varnames=context.varnames.copy(),
-    )
+    context = context.copy()
 
     # Top of the stack.
     tos = None
