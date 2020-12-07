@@ -450,6 +450,72 @@ def test_versioning_assist(builder, make_counter):
     assert call_counter.times_called() == 1
 
 
+def test_versioning_assist_with_refs(builder, make_counter):
+    call_counter = make_counter()
+
+    builder.set("core__versioning_mode", "assist")
+
+    builder.assign("x", 2)
+    builder.assign("y", 3)
+
+    def op(x, y):
+        return x + y
+
+    @builder
+    def f(x, y):
+        call_counter.mark()
+        return op(x, y)
+
+    assert builder.build().get("f") == 5
+    assert builder.build().get("f") == 5
+    assert call_counter.times_called() == 1
+
+    def op(x, y):  # noqa: F811
+        return x * y
+
+    with raises_versioning_error_for_entity("f"):
+        builder.build().get("f")
+
+    @builder  # noqa: F811
+    @bn.version(1)
+    def f(x, y):  # noqa: F811
+        call_counter.mark()
+        return op(x, y)
+
+    assert builder.build().get("f") == 6
+    assert call_counter.times_called() == 1
+
+    def op(x, y):  # noqa: F811
+        return y * x
+
+    with raises_versioning_error_for_entity("f"):
+        builder.build().get("f")
+
+    @builder  # noqa: F811
+    @bn.version(major=1, minor=1)
+    def f(x, y):  # noqa: F811
+        call_counter.mark()
+        return op(x, y)
+
+    assert builder.build().get("f") == 6
+    assert call_counter.times_called() == 0
+
+    def op(x, y):  # noqa: F811
+        return x ** y
+
+    with raises_versioning_error_for_entity("f"):
+        builder.build().get("f")
+
+    @builder  # noqa: F811
+    @bn.version(major=2)
+    def f(x, y):  # noqa: F811
+        call_counter.mark()
+        return op(x, y)
+
+    assert builder.build().get("f") == 8
+    assert call_counter.times_called() == 1
+
+
 def test_indirect_versioning_assist(builder, make_counter):
     y_call_counter = make_counter()
     f_call_counter = make_counter()
