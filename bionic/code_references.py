@@ -239,11 +239,11 @@ def get_referenced_objects(code, context):
             likely a bug in Bionic. Please raise a new issue at
             https://github.com/square/bionic/issues to let us know.
 
-            In the meantime, you can disabled bytecode analysis for
+            In the meantime, you can disable bytecode analysis for
             the corresponding function by setting `ignore_bytecode`
             on its `@version` decorator. Please note that Bionic won't
             automatically detect changes in this function; you'll need
-            to manually update the version youtself.
+            to manually update the version yourself.
             """
             )
             raise AssertionError(message) from e
