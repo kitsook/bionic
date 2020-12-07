@@ -356,6 +356,7 @@ class VersioningPolicy:
 
     check_for_bytecode_errors = attr.ib()
     treat_bytecode_as_functional = attr.ib()
+    ignore_bytecode_exceptions = attr.ib()
 
 
 @attr.s(frozen=True)

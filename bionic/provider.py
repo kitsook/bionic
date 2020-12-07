@@ -71,9 +71,9 @@ class BaseProvider:
     # assembled into a single (immutable, non-wrapped) provider once we've seen all the
     # decorators. In the case of (2), we may need some kind of new TaskTransformation
     # abstraction.
-    def get_func_attrs(self, case_key):
+    def get_func_attrs(self, case_key, versioning_policy):
         return FunctionAttributes(
-            code_fingerprint=self.get_code_fingerprint(case_key),
+            code_fingerprint=self.get_code_fingerprint(case_key, versioning_policy),
             code_versioning_policy=self.get_code_versioning_policy(case_key),
             changes_per_run=self.attrs.changes_per_run,
             aip_task_config=self.attrs.aip_task_config,
@@ -86,17 +86,24 @@ class BaseProvider:
             else self.attrs.code_versioning_policy
         )
 
-    def get_code_fingerprint(self, case_key):
+    def get_code_fingerprint(self, case_key, versioning_policy):
         code_versioning_policy = self.get_code_versioning_policy(case_key)
         code_version = code_versioning_policy.version
         source_func = self.get_source_func()
-        bytecode_hash = (
-            None
-            if source_func is None or not code_version.includes_bytecode
-            else CodeHasher.hash(
-                source_func, code_versioning_policy.suppress_bytecode_warnings
+        try:
+            bytecode_hash = (
+                None
+                if source_func is None or not code_version.includes_bytecode
+                else CodeHasher.hash(
+                    source_func,
+                    code_versioning_policy.suppress_bytecode_warnings
+                    or versioning_policy.ignore_bytecode_exceptions,
+                )
             )
-        )
+        except Exception:
+            bytecode_hash = None
+            if not versioning_policy.ignore_bytecode_exceptions:
+                raise
 
         return CodeFingerprint(
             version=code_version,
@@ -226,7 +233,7 @@ class ValueProvider(BaseProvider):
             suppress_bytecode_warnings=None,
         )
 
-    def get_code_fingerprint(self, case_key):
+    def get_code_fingerprint(self, case_key, versioning_policy):
         return CodeFingerprint(
             version=self.get_code_versioning_policy(case_key).version,
             bytecode_hash=None,
@@ -1013,8 +1020,10 @@ class PassthroughProvider(BaseDerivedProvider):
         (value,) = dep_values
         return value
 
-    def get_code_fingerprint(self, case_key):
-        fingerprint = super(PassthroughProvider, self).get_code_fingerprint(case_key)
+    def get_code_fingerprint(self, case_key, versioning_policy):
+        fingerprint = super(PassthroughProvider, self).get_code_fingerprint(
+            case_key, versioning_policy
+        )
         return attr.evolve(fingerprint, is_identity=True)
 
 
