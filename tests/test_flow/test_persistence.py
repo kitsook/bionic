@@ -908,8 +908,9 @@ def test_versioning_auto_version_options(builder):
         assert complex_number is not None
         return 1
 
-    with pytest.warns(None):
+    with pytest.warns(None) as warnings:
         assert builder.build().get("x") == 1
+    assert len(warnings) == 0
 
     # With suppress_bytecode_warnings as False, bytecode analysis
     # throws a warning.
@@ -930,11 +931,12 @@ def test_versioning_auto_version_options(builder):
         assert complex_number is not None
         return 2
 
-    with pytest.warns(None):
+    with pytest.warns(None) as warnings:
         # It's a little awkward that we compute the value again even
         # though we ignore the bytecode. But that's because the
         # bytecode is now null which changes the version.
         assert builder.build().get("x") == 2
+    assert len(warnings) == 0
 
     @builder  # noqa: F811
     @bn.version(major=2, ignore_bytecode=True)
@@ -942,9 +944,10 @@ def test_versioning_auto_version_options(builder):
         assert complex_number is not None
         return 3
 
-    with pytest.warns(None):
+    with pytest.warns(None) as warnings:
         # Even with the change in bytecode, it uses the cached value.
         assert builder.build().get("x") == 2
+    assert len(warnings) == 0
 
 
 def test_all_returned_results_are_deserialized(builder, make_counter):
